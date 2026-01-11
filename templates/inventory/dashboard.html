@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-in_stock { background: #d1fae5; color: #065f46; }
+        .status-low_stock { background: #fef3c7; color: #92400e; }
+        .status-out_of_stock { background: #fee2e2; color: #991b1b; }
+        .transaction-positive { color: #10b981; }
+        .transaction-negative { color: #ef4444; }
+        .transaction-neutral { color: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-green-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">Inventory Management</h1>
+                    <p class="text-sm">{{ restaurant.name }}</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'home' %}" class="text-white hover:text-gray-200 mr-2">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                    <form method="post" action="{% url 'toggle_inventory' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" 
+                                class="px-4 py-2 rounded font-bold {% if settings.is_enabled %}bg-green-700 hover:bg-green-800{% else %}bg-gray-700 hover:bg-gray-800{% endif %}">
+                            {% if settings.is_enabled %}
+                            <i class="fas fa-toggle-on mr-2"></i> Enabled
+                            {% else %}
+                            <i class="fas fa-toggle-off mr-2"></i> Disabled
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Ingredients</p>
+                        <p class="text-2xl font-bold">{{ total_ingredients }}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-boxes text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Active inventory items</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Value</p>
+                        <p class="text-2xl font-bold text-green-600">₹{{ total_value|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-rupee-sign text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Current stock value</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Low Stock</p>
+                        <p class="text-2xl font-bold text-yellow-600">{{ low_stock_count }}</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Need attention</p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Out of Stock</p>
+                        <p class="text-2xl font-bold text-red-600">{{ out_of_stock_count }}</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Need immediate action</p>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-lg font-bold mb-4">Quick Actions</h2>
+            <div class="flex flex-wrap gap-4">
+                <a href="{% url 'recipe_management' %}" 
+                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-utensils mr-2"></i> Manage Recipes
+                </a>
+                <a href="{% url 'inventory_reports' %}" 
+                   class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-chart-bar mr-2"></i> View Reports
+                </a>
+                <a href="{% url 'alert_management' %}" 
+                   class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-bell mr-2"></i> Alerts ({{ active_alerts.count }})
+                </a>
+                <a href="/admin/inventory/ingredient/add/" 
+                   class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-plus mr-2"></i> Add Ingredient
+                </a>
+                <button onclick="showBulkUpdate()" 
+                        class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg">
+                    <i class="fas fa-edit mr-2"></i> Bulk Update
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Low Stock Alerts -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold">Low Stock Items</h2>
+                        <span class="text-sm text-gray-500">{{ low_stock_count }} items</span>
+                    </div>
+                    
+                    {% if low_stock_items %}
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="p-3 text-left">Ingredient</th>
+                                    <th class="p-3 text-left">Current Stock</th>
+                                    <th class="p-3 text-left">Min Stock</th>
+                                    <th class="p-3 text-left">Reorder Qty</th>
+                                    <th class="p-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in low_stock_items %}
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="p-3">
+                                        <a href="{% url 'ingredient_detail' item.id %}" class="font-medium text-blue-600 hover:text-blue-800">
+                                            {{ item.name }}
+                                        </a>
+                                        <p class="text-xs text-gray-500">{{ item.unit }}</p>
+                                    </td>
+                                    <td class="p-3 font-bold {% if item.status == 'out_of_stock' %}text-red-600{% else %}text-yellow-600{% endif %}">
+                                        {{ item.current_stock }}
+                                    </td>
+                                    <td class="p-3">{{ item.minimum_stock }}</td>
+                                    <td class="p-3">{{ item.reorder_quantity }}</td>
+                                    <td class="p-3">
+                                        <button onclick="quickReorder({{ item.id }})" 
+                                                class="text-green-600 hover:text-green-800 mr-3">
+                                            <i class="fas fa-shopping-cart"></i>
+                                        </button>
+                                        <a href="{% url 'ingredient_detail' item.id %}" 
+                                           class="text-blue-600 hover:text-blue-800">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-check-circle text-3xl mb-3"></i>
+                        <p>No low stock items</p>
+                        <p class="text-sm mt-1">All ingredients are sufficiently stocked</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Recent Transactions -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-lg font-bold mb-4">Recent Transactions</h2>
+                    
+                    {% if recent_transactions %}
+                    <div class="overflow-y-auto max-h-96">
+                        {% for transaction in recent_transactions %}
+                        <div class="border-b py-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <span class="font-medium">{{ transaction.ingredient.name }}</span>
+                                        <span class="text-xs ml-2 px-2 py-1 rounded-full 
+                                            {% if transaction.transaction_type in 'purchase,transfer_in,initial' %}bg-green-100 text-green-800
+                                            {% elif transaction.transaction_type in 'consumption,waste,transfer_out' %}bg-red-100 text-red-800
+                                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                            {{ transaction.get_transaction_type_display }}
+                                        </span>
+                                    </div>
+                                    {% if transaction.reference %}
+                                    <p class="text-xs text-gray-500 mt-1">{{ transaction.reference }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-bold 
+                                        {% if transaction.transaction_type in 'purchase,transfer_in,initial' %}text-green-600
+                                        {% elif transaction.transaction_type in 'consumption,waste,transfer_out' %}text-red-600
+                                        {% else %}text-gray-600{% endif %}">
+                                        {% if transaction.transaction_type in 'purchase,transfer_in,initial' %}+{% else %}-{% endif %}
+                                        {{ transaction.quantity }} {{ transaction.ingredient.unit }}
+                                    </span>
+                                    <p class="text-xs text-gray-500">{{ transaction.created_at|date:"M d, H:i" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4 text-center">
+                        <a href="{% url 'export_inventory' 'transactions' %}" 
+                           class="text-blue-600 hover:text-blue-800 text-sm">
+                            <i class="fas fa-download mr-1"></i> Export All Transactions
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-exchange-alt text-3xl mb-3"></i>
+                        <p>No recent transactions</p>
+                        <p class="text-sm mt-1">Transactions will appear here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <div class="lg:col-span-1">
+                <!-- Active Alerts -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h2 class="text-lg font-bold mb-4">Active Alerts</h2>
+                    
+                    {% if active_alerts %}
+                    <div class="space-y-3 max-h-64 overflow-y-auto">
+                        {% for alert in active_alerts %}
+                        <div class="border-l-4 border-yellow-500 pl-3 py-2">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-medium text-sm">{{ alert.ingredient.name }}</p>
+                                    <p class="text-xs text-gray-600">{{ alert.message|truncatechars:50 }}</p>
+                                </div>
+                                <form method="post" action="{% url 'alert_management' %}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="alert_id" value="{{ alert.id }}">
+                                    <input type="hidden" name="action" value="resolve">
+                                    <button type="submit" class="text-green-600 hover:text-green-800">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">{{ alert.created_at|timesince }} ago</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-4">
+                        <a href="{% url 'alert_management' %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                            View All Alerts →
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-bell-slash text-2xl mb-2"></i>
+                        <p class="text-sm">No active alerts</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Top Consumed -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                    <h2 class="text-lg font-bold mb-4">Top Consumed (7 Days)</h2>
+                    
+                    {% if top_consumed %}
+                    <div class="space-y-3">
+                        {% for item in top_consumed %}
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm font-medium">{{ item.ingredient__name }}</p>
+                                <p class="text-xs text-gray-500">{{ item.total_consumed }} {{ item.ingredient__unit }}</p>
+                            </div>
+                            <span class="text-sm font-bold text-red-600">
+                                -{{ item.total_consumed }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-gray-500">
+                        <i class="fas fa-chart-line text-2xl mb-2"></i>
+                        <p class="text-sm">No consumption data</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- System Status -->
+                <div class="bg-gray-800 text-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-lg font-bold mb-4">System Status</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Auto Update</span>
+                            <span class="px-2 py-1 text-xs rounded-full {% if settings.auto_update_on_bill %}bg-green-500{% else %}bg-red-500{% endif %}">
+                                {% if settings.auto_update_on_bill %}ON{% else %}OFF{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Alerts</span>
+                            <span class="px-2 py-1 text-xs rounded-full {% if settings.enable_alerts %}bg-green-500{% else %}bg-red-500{% endif %}">
+                                {% if settings.enable_alerts %}ON{% else %}OFF{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Inventory</span>
+                            <span class="px-2 py-1 text-xs rounded-full {% if settings.is_enabled %}bg-green-500{% else %}bg-red-500{% endif %}">
+                                {% if settings.is_enabled %}ACTIVE{% else %}INACTIVE{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-700">
+                        <p class="text-xs text-gray-400">Last Updated: Now</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bulk Update Modal -->
+    <div id="bulkUpdateModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4">
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-4">Bulk Stock Update</h3>
+                    <div id="bulkUpdateItems"></div>
+                    <div class="mt-6 flex justify-end space-x-4">
+                        <button onclick="hideBulkUpdate()" class="px-4 py-2 border rounded-lg">Cancel</button>
+                        <button onclick="submitBulkUpdate()" class="px-4 py-2 bg-green-500 text-white rounded-lg">Update All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showBulkUpdate() {
+            // Load low stock items for bulk update
+            fetch('/admin/inventory/ingredient/?status__exact=low_stock')
+                .then(response => response.text())
+                .then(html => {
+                    // Parse HTML and extract items
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const items = doc.querySelectorAll('.ingredient-row');
+                    
+                    let content = '<div class="space-y-4">';
+                    items.forEach(item => {
+                        const name = item.querySelector('.field-name').textContent;
+                        const current = item.querySelector('.field-current_stock').textContent;
+                        content += `
+                            <div class="flex items-center space-x-4 p-3 border rounded">
+                                <div class="flex-1">
+                                    <p class="font-medium">${name}</p>
+                                    <p class="text-sm text-gray-500">Current: ${current}</p>
+                                </div>
+                                <input type="number" class="w-24 border rounded px-2 py-1" placeholder="Add Qty" min="0">
+                            </div>
+                        `;
+                    });
+                    content += '</div>';
+                    
+                    document.getElementById('bulkUpdateItems').innerHTML = content;
+                    document.getElementById('bulkUpdateModal').classList.remove('hidden');
+                });
+        }
+        
+        function hideBulkUpdate() {
+            document.getElementById('bulkUpdateModal').classList.add('hidden');
+        }
+        
+        function quickReorder(ingredientId) {
+            if (confirm('Create purchase order for this item?')) {
+                fetch('{% url "quick_actions" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: `action=reorder_low_stock`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    }
+                });
+            }
+        }
+        
+        // Auto-refresh every 2 minutes
+        setTimeout(() => {
+            location.reload();
+        }, 120000);
+    </script>
+</body>
+</html>

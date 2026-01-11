@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Table {{ table.table_number }} - KAKA CAFE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .category-tabs {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 50;
+            padding: 10px 0;
+            border-bottom: 2px solid #e5e7eb;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .category-tab {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 0 5px;
+            background: #f3f4f6;
+            border-radius: 20px;
+            color: #6b7280;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .category-tab.active {
+            background: #4f46e5;
+            color: white;
+        }
+        .category-tab:hover {
+            background: #e5e7eb;
+        }
+        .menu-item-card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .menu-item-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-color: #4f46e5;
+        }
+        .order-item {
+            animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold">
+                        <i class="fas fa-table text-blue-600 mr-2"></i>
+                        Table {{ table.table_number }}
+                    </h1>
+                    <p class="text-gray-600">{{ table.table_name }} • {{ table.capacity }} seats</p>
+                </div>
+                <div>
+                    <a href="/" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Tables
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <!-- Menu Section -->
+            <div class="lg:w-2/3">
+                <!-- Category Tabs -->
+                <div class="category-tabs" id="categoryTabs">
+                    {% for category in categories %}
+                    <a href="#category-{{ category.id }}" class="category-tab" 
+                       onclick="scrollToCategory('category-{{ category.id }}')">
+                        {{ category.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+
+                <!-- Menu Items -->
+                <div class="mt-4 bg-white rounded-xl shadow-lg p-6">
+                    {% for category in categories %}
+                    <div id="category-{{ category.id }}" class="mb-8">
+                        <h2 class="text-xl font-bold mb-4 pb-2 border-b">{{ category.name }}</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {% for item in category.menuitems.all %}
+                            {% if item.is_available %}
+                            <div class="menu-item-card border-2 border-gray-200 rounded-lg p-4"
+                                 onclick="addItem({{ item.id }}, '{{ item.name|escapejs }}', {{ item.price }})">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="font-bold text-gray-800">{{ item.name }}</div>
+                                        {% if item.description %}
+                                        <div class="text-gray-600 text-sm mt-1">{{ item.description|truncatechars:40 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-green-600 font-bold">₹{{ item.price }}</div>
+                                </div>
+                                <div class="mt-3 text-right">
+                                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">Click to add</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Order Section -->
+            <div class="lg:w-1/3">
+                <div class="bg-white rounded-xl shadow-lg p-6 sticky top-4">
+                    <h2 class="text-xl font-bold mb-4">
+                        <i class="fas fa-shopping-cart text-green-600 mr-2"></i>
+                        Current Order
+                    </h2>
+                    
+                    {% if order %}
+                    <div id="orderItems" class="max-h-96 overflow-y-auto">
+                        {% for item in order.order_items.all %}
+                        <div class="order-item flex justify-between items-center py-3 border-b">
+                            <div class="flex-1">
+                                <div class="font-medium">{{ item.menu_item.name }}</div>
+                                <div class="text-sm text-gray-500">₹{{ item.price }} each</div>
+                            </div>
+                            <div class="flex items-center">
+                                <button onclick="updateQuantity({{ item.id }}, -1)" 
+                                        class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
+                                    <i class="fas fa-minus text-sm"></i>
+                                </button>
+                                <span class="mx-3 font-bold min-w-[30px] text-center">{{ item.quantity }}</span>
+                                <button onclick="updateQuantity({{ item.id }}, 1)" 
+                                        class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300">
+                                    <i class="fas fa-plus text-sm"></i>
+                                </button>
+                                <span class="ml-4 font-bold text-green-600 min-w-[60px] text-right">₹{{ item.total }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t">
+                        <div class="flex justify-between py-2">
+                            <span>Subtotal:</span>
+                            <span class="font-medium">₹{{ order.subtotal }}</span>
+                        </div>
+                        {% if order.discount > 0 %}
+                        <div class="flex justify-between py-2 text-red-600">
+                            <span>Discount:</span>
+                            <span>-₹{{ order.discount }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="flex justify-between py-2 font-bold text-lg">
+                            <span>Total:</span>
+                            <span class="text-green-600">₹{{ order.total }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 space-y-3">
+                        <a href="{% url 'generate_bill' order.id %}" 
+                           class="block w-full bg-green-500 text-white text-center py-3 rounded-lg font-bold hover:bg-green-600">
+                            <i class="fas fa-receipt mr-2"></i>Generate Bill
+                        </a>
+                        
+                        <button onclick="clearOrder()" 
+                                class="block w-full bg-red-500 text-white text-center py-3 rounded-lg font-bold hover:bg-red-600">
+                            <i class="fas fa-trash-alt mr-2"></i>Clear Order
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-8">
+                        <i class="fas fa-shopping-cart text-gray-300 text-5xl mb-4"></i>
+                        <p class="text-gray-500">No active order</p>
+                        <p class="text-gray-400 text-sm mt-2">Add items from the menu to start</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-scroll category tabs
+        function updateActiveTab() {
+            const categoryTabs = document.querySelectorAll('.category-tab');
+            const categorySections = document.querySelectorAll('[id^="category-"]');
+            
+            let activeSection = null;
+            let maxVisibility = 0;
+            
+            categorySections.forEach(section => {
+                const rect = section.getBoundingClientRect();
+                const visibility = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
+                
+                if (visibility > maxVisibility) {
+                    maxVisibility = visibility;
+                    activeSection = section.id;
+                }
+            });
+            
+            categoryTabs.forEach(tab => {
+                if (tab.getAttribute('href') === '#' + activeSection) {
+                    tab.classList.add('active');
+                    // Scroll tab into view
+                    tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+        }
+        
+        // Initial update
+        updateActiveTab();
+        
+        // Update on scroll
+        window.addEventListener('scroll', updateActiveTab);
+        
+        // Scroll to category
+        function scrollToCategory(categoryId) {
+            const element = document.getElementById(categoryId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        
+        // Add item function
+        function addItem(itemId, itemName, itemPrice) {
+            fetch('/add-item/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    table_id: {{ table.id }},
+                    item_id: itemId,
+                    quantity: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+        
+        // Update quantity function
+        function updateQuantity(itemId, change) {
+            fetch('/update-item/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    item_id: itemId,
+                    quantity: change
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+        
+        // Clear order function
+        function clearOrder() {
+            if (confirm('Are you sure you want to clear this order?')) {
+                // Delete all order items
+                fetch('/update-item/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        order_id: {{ order.id }},
+                        clear_all: true
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    }
+                });
+            }
+        }
+        
+        // CSRF token function
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

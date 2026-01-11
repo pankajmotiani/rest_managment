@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table {{ table.table_number }} - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .category-tab.active {
+            background-color: #f97316;
+            color: white;
+        }
+        .menu-item-card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .menu-item-card:hover {
+            background-color: #fffbeb;
+            transform: translateY(-2px);
+        }
+        .category-section {
+            scroll-margin-top: 80px;
+        }
+        .sticky-categories {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: white;
+            padding: 1rem 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-orange-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <a href="{% url 'home' %}" class="text-white hover:text-gray-200">
+                        <i class="fas fa-arrow-left text-lg"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-xl font-bold">Table {{ table.table_number }}</h1>
+                        <p class="text-sm opacity-90">{{ restaurant.name }} | {{ restaurant.phone }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Menu Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-lg">
+                    <!-- Sticky Category Tabs -->
+                    <div class="sticky-categories border-b">
+                        <div class="p-4">
+                            <h2 class="text-xl font-bold text-gray-800 mb-2">Menu</h2>
+                            <div class="flex space-x-2 overflow-x-auto pb-2">
+                                <button class="category-tab px-4 py-2 rounded-lg font-medium whitespace-nowrap bg-orange-500 text-white"
+                                        onclick="scrollToCategory('all')">
+                                    All Items
+                                </button>
+                                {% for category in categories %}
+                                <button class="category-tab px-4 py-2 rounded-lg font-medium whitespace-nowrap bg-gray-100 hover:bg-gray-200"
+                                        onclick="scrollToCategory('{{ category.id }}')"
+                                        id="tab-{{ category.id }}">
+                                    {{ category.name }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Menu Items with Categories -->
+                    <div class="p-6" id="menu-container">
+                        <!-- All Items View -->
+                        <div id="all-items" class="category-section">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for category in categories %}
+                                {% for item in category.menuitems.all %}
+                                {% if item.is_available %}
+                                <div class="menu-item-card border border-gray-200 rounded-xl p-4 category-{{ category.id }}"
+                                     onclick="addItemToOrder({{ item.id }})">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 class="font-bold text-gray-800">{{ item.name }}</h3>
+                                            {% if item.description %}
+                                            <p class="text-sm text-gray-600 mt-1">{{ item.description|truncatechars:50 }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <span class="text-lg font-bold text-green-600">₹{{ item.price }}</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">{{ category.name }}</div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Category Sections -->
+                        {% for category in categories %}
+                        <div id="category-{{ category.id }}" class="category-section hidden">
+                            <h3 class="text-lg font-bold mb-4 text-gray-800">{{ category.name }}</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {% for item in category.menuitems.all %}
+                                {% if item.is_available %}
+                                <div class="menu-item-card border border-gray-200 rounded-xl p-4"
+                                     onclick="addItemToOrder({{ item.id }})">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h3 class="font-bold text-gray-800">{{ item.name }}</h3>
+                                            {% if item.description %}
+                                            <p class="text-sm text-gray-600 mt-1">{{ item.description|truncatechars:50 }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <span class="text-lg font-bold text-green-600">₹{{ item.price }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bill Section (Same as before - keep your existing bill code) -->
+            <div class="lg:col-span-1">
+                <!-- Your existing bill section code here -->
+                <!-- Copy from your working table_detail.html -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const tableId = {{ table.id }};
+        const orderId = {{ order.id|default:"null" }};
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Scroll to category
+        function scrollToCategory(categoryId) {
+            // Update active tab
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('bg-orange-500', 'text-white');
+                tab.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            });
+            
+            if (categoryId === 'all') {
+                document.querySelector('.category-tab').classList.add('bg-orange-500', 'text-white');
+                document.querySelector('.category-tab').classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                
+                // Show all items
+                document.querySelectorAll('.category-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                document.getElementById('all-items').classList.remove('hidden');
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                const tab = document.getElementById(`tab-${categoryId}`);
+                tab.classList.add('bg-orange-500', 'text-white');
+                tab.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                
+                // Show only selected category
+                document.querySelectorAll('.category-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                const categorySection = document.getElementById(`category-${categoryId}`);
+                if (categorySection) {
+                    categorySection.classList.remove('hidden');
+                    
+                    // Scroll to category
+                    categorySection.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        }
+        
+        // Auto-detect scroll position and update active tab
+        let categoryElements = [];
+        {% for category in categories %}
+        categoryElements.push({
+            id: '{{ category.id }}',
+            element: document.getElementById('category-{{ category.id }}')
+        });
+        {% endfor %}
+        
+        let currentActiveTab = 'all';
+        
+        function updateActiveTabOnScroll() {
+            const scrollPosition = window.scrollY + 100; // Offset for sticky header
+            
+            // Check if we're at the top (all items)
+            if (scrollPosition < 200) {
+                if (currentActiveTab !== 'all') {
+                    currentActiveTab = 'all';
+                    updateTabUI('all');
+                }
+                return;
+            }
+            
+            // Check which category is in view
+            for (const category of categoryElements) {
+                if (category.element) {
+                    const rect = category.element.getBoundingClientRect();
+                    if (rect.top <= 150 && rect.bottom >= 150) {
+                        if (currentActiveTab !== category.id) {
+                            currentActiveTab = category.id;
+                            updateTabUI(category.id);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        function updateTabUI(categoryId) {
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('bg-orange-500', 'text-white');
+                tab.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            });
+            
+            if (categoryId === 'all') {
+                document.querySelector('.category-tab').classList.add('bg-orange-500', 'text-white');
+                document.querySelector('.category-tab').classList.remove('bg-gray-100', 'hover:bg-gray-200');
+            } else {
+                const tab = document.getElementById(`tab-${categoryId}`);
+                if (tab) {
+                    tab.classList.add('bg-orange-500', 'text-white');
+                    tab.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                }
+            }
+        }
+        
+        // Add scroll listener
+        window.addEventListener('scroll', updateActiveTabOnScroll);
+        
+        // Add item to order
+        function addItemToOrder(itemId) {
+            fetch('/add-item/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    table_id: tableId,
+                    item_id: itemId,
+                    quantity: 1
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+        }
+        
+        // Initialize - show all items
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollToCategory('all');
+        });
+    </script>
+</body>
+</html>

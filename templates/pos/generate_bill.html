@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Bill - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">{{ restaurant.name }}</h1>
+                <p class="text-gray-600">{{ restaurant.address }}</p>
+                <p class="text-gray-600">Phone: {{ restaurant.phone }}</p>
+                <div class="mt-4 border-t border-b py-2">
+                    <h2 class="text-xl font-bold">BILL GENERATION</h2>
+                    <p class="text-sm">Table: {{ order.table.table_number }} | Order #{{ order.id }}</p>
+                    <p class="text-sm">{{ order.created_at|date:"d M Y, h:i A" }}</p>
+                </div>
+            </div>
+
+            <!-- Bill Preview -->
+            <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                <!-- Restaurant Header -->
+                <div class="text-center mb-4">
+                    <div class="font-bold text-lg">{{ restaurant.name }}</div>
+                    <div class="text-sm">{{ restaurant.address }}</div>
+                    <div class="text-sm">Ph: {{ restaurant.phone }}</div>
+                    {% if restaurant.gstin %}
+                    <div class="text-sm">GSTIN: {{ restaurant.gstin }}</div>
+                    {% endif %}
+                    <div class="border-t border-dashed my-2"></div>
+                </div>
+
+                <!-- Bill Details -->
+                <div class="mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span>Bill No:</span>
+                        <span>{{ order.id|stringformat:"06d" }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Date:</span>
+                        <span>{{ order.created_at|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Table:</span>
+                        <span>{{ order.table.table_number }}</span>
+                    </div>
+                    {% if order.customer_name %}
+                    <div class="flex justify-between text-sm">
+                        <span>Customer:</span>
+                        <span>{{ order.customer_name }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="border-t border-dashed my-2"></div>
+                </div>
+
+                <!-- Items -->
+                <div class="mb-4">
+                    <div class="flex border-b py-1 font-bold">
+                        <div class="flex-1">Item</div>
+                        <div class="w-16 text-center">Qty</div>
+                        <div class="w-20 text-right">Price</div>
+                        <div class="w-20 text-right">Total</div>
+                    </div>
+                    
+                    {% for item in order.order_items.all %}
+                    <div class="flex border-b py-1 text-sm">
+                        <div class="flex-1">{{ item.menu_item.name }}</div>
+                        <div class="w-16 text-center">{{ item.quantity }}</div>
+                        <div class="w-20 text-right">₹{{ item.price }}</div>
+                        <div class="w-20 text-right">₹{{ item.total }}</div>
+                    </div>
+                    {% endfor %}
+                    
+                    <div class="border-t border-dashed my-2"></div>
+                </div>
+
+                <!-- Totals -->
+                <div class="space-y-1 text-sm">
+                    <div class="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>₹{{ order.subtotal }}</span>
+                    </div>
+                    
+                    {% if order.water_bottle > 0 %}
+                    <div class="flex justify-between">
+                        <span>Water Bottle:</span>
+                        <span>₹{{ order.water_bottle }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.packaging > 0 %}
+                    <div class="flex justify-between">
+                        <span>Packaging:</span>
+                        <span>₹{{ order.packaging }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.service_charge > 0 %}
+                    <div class="flex justify-between">
+                        <span>Service Charge:</span>
+                        <span>₹{{ order.service_charge }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.other_charges > 0 %}
+                    <div class="flex justify-between">
+                        <span>{{ order.other_charges_description|default:"Other Charges" }}:</span>
+                        <span>₹{{ order.other_charges }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.discount > 0 %}
+                    <div class="flex justify-between text-red-600">
+                        <span>Discount:</span>
+                        <span>-₹{{ order.discount }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="border-t border-black pt-1 mt-2">
+                        <div class="flex justify-between font-bold">
+                            <span>GRAND TOTAL:</span>
+                            <span>₹{{ order.total }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="text-center mt-6 pt-4 border-t border-dashed">
+                    <div class="text-sm">Thank you for dining with us!</div>
+                    <div class="text-xs text-gray-500">Please visit again</div>
+                </div>
+            </div>
+
+            <!-- Payment Form -->
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="bg-blue-50 p-6 rounded-lg mb-6">
+                    <h3 class="font-bold text-lg mb-4">Payment Details</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Payment Method -->
+                        <div>
+                            <label class="block font-medium mb-2">Payment Method</label>
+                            <select name="payment_method" class="w-full border rounded-lg px-4 py-2" required>
+                                <option value="cash">Cash</option>
+                                <option value="card">Card</option>
+                                <option value="upi">UPI</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Amount Received -->
+                        <div>
+                            <label class="block font-medium mb-2">
+                                Amount Received
+                                <span class="text-sm text-gray-600">(Total: ₹{{ order.total }})</span>
+                            </label>
+                            <input type="number" name="paid_amount" 
+                                   value="{{ order.total }}" 
+                                   min="{{ order.total }}" 
+                                   step="1"
+                                   class="w-full border rounded-lg px-4 py-2"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <!-- Customer Details -->
+                    <div class="mt-4">
+                        <label class="block font-medium mb-2">Customer Name (Optional)</label>
+                        <input type="text" name="customer_name" 
+                               value="{{ order.customer_name }}"
+                               class="w-full border rounded-lg px-4 py-2"
+                               placeholder="Enter customer name">
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block font-medium mb-2">Customer Phone (Optional)</label>
+                        <input type="text" name="customer_phone" 
+                               value="{{ order.customer_phone }}"
+                               class="w-full border rounded-lg px-4 py-2"
+                               placeholder="Enter phone number">
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-4">
+                    <button type="submit" 
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold text-lg">
+                        <i class="fas fa-check-circle mr-2"></i> CONFIRM PAYMENT
+                    </button>
+                    
+                    <a href="{% url 'table_detail' order.table.id %}" 
+                       class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-bold text-lg text-center">
+                        <i class="fas fa-edit mr-2"></i> EDIT ORDER
+                    </a>
+                    
+                    <button type="button" onclick="window.print()" 
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-bold text-lg">
+                        <i class="fas fa-print mr-2"></i> PRINT PREVIEW
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Change Calculator -->
+            <div class="bg-yellow-50 p-4 rounded-lg mt-6">
+                <h4 class="font-bold mb-2">Quick Change Calculator</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <button type="button" onclick="calculateChange({{ order.total|add:100 }})" 
+                            class="bg-white border rounded py-2 hover:bg-gray-100">
+                        ₹{{ order.total|add:100|floatformat:0 }}
+                    </button>
+                    <button type="button" onclick="calculateChange({{ order.total|add:200 }})" 
+                            class="bg-white border rounded py-2 hover:bg-gray-100">
+                        ₹{{ order.total|add:200|floatformat:0 }}
+                    </button>
+                    <button type="button" onclick="calculateChange({{ order.total|add:500 }})" 
+                            class="bg-white border rounded py-2 hover:bg-gray-100">
+                        ₹{{ order.total|add:500|floatformat:0 }}
+                    </button>
+                    <button type="button" onclick="calculateChange({{ order.total|add:1000 }})" 
+                            class="bg-white border rounded py-2 hover:bg-gray-100">
+                        ₹{{ order.total|add:1000|floatformat:0 }}
+                    </button>
+                </div>
+                <div id="changeResult" class="mt-2 font-bold text-green-600"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Calculate change
+        function calculateChange(amount) {
+            const total = {{ order.total }};
+            const change = amount - total;
+            
+            document.querySelector('input[name="paid_amount"]').value = amount;
+            document.getElementById('changeResult').innerHTML = 
+                `Amount: ₹${amount} | Change: ₹${change.toFixed(2)}`;
+        }
+        
+        // Auto-focus on payment method
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('select[name="payment_method"]').focus();
+        });
+        
+        // Update paid amount when changed
+        document.querySelector('input[name="paid_amount"]').addEventListener('input', function() {
+            const total = {{ order.total }};
+            const paid = parseFloat(this.value) || 0;
+            const change = paid - total;
+            
+            if (change >= 0) {
+                document.getElementById('changeResult').innerHTML = 
+                    `Change: ₹${change.toFixed(2)}`;
+            } else {
+                document.getElementById('changeResult').innerHTML = 
+                    `<span class="text-red-600">Short by: ₹${Math.abs(change).toFixed(2)}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>

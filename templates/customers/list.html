@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - {{ restaurant.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <header class="bg-purple-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">Customer Database</h1>
+                    <p class="text-sm">{{ restaurant.name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'home' %}" class="text-white hover:text-gray-200 mr-4">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                    <a href="{% url 'sales_dashboard' %}" class="text-white hover:text-gray-200 mr-4">
+                        <i class="fas fa-chart-line mr-1"></i> Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">All Customers</h2>
+                <div class="flex space-x-4">
+                    <form method="get" class="flex">
+                        <input type="text" name="search" value="{{ search }}" 
+                               placeholder="Search by name or phone..." 
+                               class="border rounded-l-lg px-4 py-2 w-64">
+                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-r-lg">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                    <a href="{% url 'sync_customers' %}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-sync mr-2"></i> Sync Customers
+                    </a>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <p class="text-sm text-blue-700">Total Customers</p>
+                    <p class="text-2xl font-bold">{{ customers.count }}</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <p class="text-sm text-green-700">Total Revenue</p>
+                    <p class="text-2xl font-bold">
+                        ₹{{ customers.aggregate.total=Sum|default:'total_spent'|floatformat:2 }}
+                    </p>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <p class="text-sm text-yellow-700">Repeat Customers</p>
+                    <p class="text-2xl font-bold">
+                        {{ customers.filter.total_orders__gt=1|length }}
+                    </p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <p class="text-sm text-purple-700">Avg. Spend</p>
+                    <p class="text-2xl font-bold">
+                        {% with total=customers.aggregate.total=Sum|default:'total_spent' count=customers.count %}
+                        {% if count > 0 %}
+                        ₹{{ total|divisibleby:count|floatformat:2 }}
+                        {% else %}
+                        ₹0
+                        {% endif %}
+                        {% endwith %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Customers Table -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="p-4 text-left">Customer</th>
+                        <th class="p-4 text-left">Phone</th>
+                        <th class="p-4 text-left">Email</th>
+                        <th class="p-4 text-left">Orders</th>
+                        <th class="p-4 text-left">Total Spent</th>
+                        <th class="p-4 text-left">Last Order</th>
+                        <th class="p-4 text-left">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-4">
+                            <div class="font-medium">{{ customer.name }}</div>
+                            {% if customer.total_orders > 1 %}
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Repeat</span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4">{{ customer.phone }}</td>
+                        <td class="p-4">{{ customer.email|default:"-" }}</td>
+                        <td class="p-4 font-bold">{{ customer.total_orders }}</td>
+                        <td class="p-4 font-bold text-green-600">₹{{ customer.total_spent }}</td>
+                        <td class="p-4">
+                            {% if customer.last_order_date %}
+                            {{ customer.last_order_date|date:"d M Y" }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="p-4">
+                            <a href="{% url 'customer_detail' customer.id %}" 
+                               class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-eye mr-1"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-gray-500">
+                            <i class="fas fa-users text-3xl mb-3"></i>
+                            <p>No customers found</p>
+                            <p class="text-sm mt-2">Customers will appear when they provide phone numbers during billing</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>
