@@ -1,7 +1,8 @@
 from django.db import models
+from pos.models import Order, Bill
+from decimal import Decimal
 
 class SalesReport(models.Model):
-    id = models.BigAutoField(primary_key=True)  # Add this line
     report_date = models.DateField()
     report_type = models.CharField(max_length=20, choices=[
         ('daily', 'Daily'),

@@ -5,9 +5,12 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('pos.urls')),
-    path('reports/', include('reports.urls')),
+    path('', include('pos.urls')),           # Main billing system
+    path('reports/', include('reports.urls')),  # Sales reports
+    path('customers/', include('customers.urls')),  # Customer database
+    path('inventory/', include('inventory.urls')),  # Optional inventory
 ]
 
+# Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

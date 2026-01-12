@@ -1,9 +1,13 @@
 from django.db import models
+from decimal import Decimal
 
 class Restaurant(models.Model):
     name = models.CharField(max_length=200, default="KAKA CAFE")
     address = models.TextField(default="Bangalore")
     phone = models.CharField(max_length=20, default="7022470962")
+    email = models.EmailField(default="contact@kakacafe.com")
+    gstin = models.CharField(max_length=15, blank=True)
+    logo = models.ImageField(upload_to='logos/', blank=True)
     
     def __str__(self):
         return self.name
@@ -14,6 +18,7 @@ class Category(models.Model):
     
     class Meta:
         ordering = ['display_order']
+        verbose_name_plural = "Categories"
     
     def __str__(self):
         return self.name
@@ -21,6 +26,7 @@ class Category(models.Model):
 class MenuItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='menuitems')
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     is_available = models.BooleanField(default=True)
     
@@ -47,19 +53,34 @@ class Order(models.Model):
     customer_phone = models.CharField(max_length=15, blank=True)
     status = models.CharField(max_length=20, default='active',
                              choices=[('active', 'Active'), 
-                                     ('completed', 'Completed')])
+                                     ('completed', 'Completed'),
+                                     ('cancelled', 'Cancelled')])
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Extra charges
+    water_bottle = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    packaging = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    other_charges = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    other_charges_description = models.CharField(max_length=100, blank=True)
+    
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['-created_at']
     
     def calculate_totals(self):
+        # Calculate subtotal from items
         items_total = sum(item.total for item in self.order_items.all())
+        
+        # Calculate total WITHOUT TAX
         self.subtotal = items_total
-        self.total = items_total - self.discount
+        self.total = (items_total - self.discount + 
+                     self.water_bottle + self.packaging + 
+                     self.service_charge + self.other_charges)
         self.save()
     
     def __str__(self):
@@ -87,11 +108,15 @@ class Bill(models.Model):
     payment_method = models.CharField(max_length=50, 
                                      choices=[('cash', 'Cash'), 
                                              ('card', 'Card'),
-                                             ('upi', 'UPI')],
+                                             ('upi', 'UPI'),
+                                             ('online', 'Online')],
                                      default='cash')
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2)
     change_return = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
     
     def save(self, *args, **kwargs):
         if not self.bill_number:
@@ -104,12 +129,6 @@ class Bill(models.Model):
             self.change_return = self.paid_amount - self.order.total
         else:
             self.change_return = 0
-        
-        self.order.status = 'completed'
-        self.order.save()
-        
-        self.order.table.status = 'available'
-        self.order.table.save()
         
         super().save(*args, **kwargs)
     

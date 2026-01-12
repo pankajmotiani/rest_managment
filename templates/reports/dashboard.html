@@ -1,114 +1,216 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Reports - KAKA CAFE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Reports - {{ restaurant.name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">
-                <i class="fas fa-chart-line text-blue-600 mr-3"></i>
-                Sales Reports
-            </h1>
-            <p class="text-gray-600">{{ today|date:"F d, Y" }}</p>
-            <div class="mt-4">
-                <a href="/" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
-                    <i class="fas fa-arrow-left mr-2"></i>Back to POS
-                </a>
+<body class="bg-gray-50">
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">Sales Reports</h1>
+                    <p class="text-sm">{{ restaurant.name }} | {{ today|date:"d M Y" }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'home' %}" class="text-white hover:text-gray-200 mr-4">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                    <a href="{% url 'customers_list' %}" class="text-white hover:text-gray-200 mr-4">
+                        <i class="fas fa-users mr-1"></i> Customers
+                    </a>
+                </div>
             </div>
         </div>
+    </header>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-bold text-gray-700 mb-4">Today's Sales</h3>
-                <p class="text-3xl font-bold text-green-600">₹{{ daily_sales|floatformat:2 }}</p>
-                <p class="text-gray-600 mt-2">
-                    <i class="fas fa-receipt mr-1"></i> {{ daily_orders }} orders
-                    <br>
-                    <i class="fas fa-calculator mr-1"></i> Avg: ₹{{ daily_avg|floatformat:2 }}
-                </p>
+    <main class="container mx-auto px-4 py-6">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Today's Sales</p>
+                        <p class="text-2xl font-bold text-green-600">₹{{ daily_sales }}</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-rupee-sign text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">{{ daily_orders }} orders | Avg: ₹{{ daily_avg|floatformat:2 }}</p>
             </div>
-
-            <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-bold text-gray-700 mb-4">This Week</h3>
-                <p class="text-3xl font-bold text-blue-600">₹{{ weekly_sales|floatformat:2 }}</p>
-                <p class="text-gray-600 mt-2">
-                    <i class="fas fa-receipt mr-1"></i> {{ weekly_orders }} orders
-                    <br>
-                    Last 7 days
-                </p>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Weekly Sales</p>
+                        <p class="text-2xl font-bold text-blue-600">₹{{ weekly_sales }}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-calendar-week text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">{{ weekly_orders }} orders this week</p>
             </div>
-
-            <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-bold text-gray-700 mb-4">This Month</h3>
-                <p class="text-3xl font-bold text-purple-600">₹{{ monthly_sales|floatformat:2 }}</p>
-                <p class="text-gray-600 mt-2">
-                    <i class="fas fa-receipt mr-1"></i> {{ monthly_orders }} orders
-                    <br>
-                    Month to date
-                </p>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Monthly Sales</p>
+                        <p class="text-2xl font-bold text-purple-600">₹{{ monthly_sales }}</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-calendar-alt text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">{{ monthly_orders }} orders this month</p>
             </div>
-        </div>
-
-        <!-- Export -->
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-bold mb-4">Export Reports</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="/reports/export/daily/" class="bg-green-500 text-white p-4 rounded-lg text-center hover:bg-green-600">
-                    <i class="fas fa-download text-2xl mb-2 block"></i>
-                    <p class="font-bold">Daily CSV</p>
-                    <p class="text-sm">Today's sales</p>
-                </a>
-                
-                <a href="/reports/export/weekly/" class="bg-blue-500 text-white p-4 rounded-lg text-center hover:bg-blue-600">
-                    <i class="fas fa-download text-2xl mb-2 block"></i>
-                    <p class="font-bold">Weekly CSV</p>
-                    <p class="text-sm">Last 7 days</p>
-                </a>
-                
-                <a href="/reports/items/" class="bg-purple-500 text-white p-4 rounded-lg text-center hover:bg-purple-600">
-                    <i class="fas fa-list-alt text-2xl mb-2 block"></i>
-                    <p class="font-bold">Item Sales</p>
-                    <p class="text-sm">Detailed report</p>
-                </a>
-            </div>
-        </div>
-
-        <!-- Recent Bills -->
-        {% if recent_bills %}
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-2xl font-bold mb-4">Recent Bills</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="bg-gray-50">
-                            <th class="py-3 px-4 text-left">Bill #</th>
-                            <th class="py-3 px-4 text-left">Time</th>
-                            <th class="py-3 px-4 text-left">Table</th>
-                            <th class="py-3 px-4 text-left">Amount</th>
-                            <th class="py-3 px-4 text-left">Payment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for bill in recent_bills %}
-                        <tr class="border-t">
-                            <td class="py-3 px-4">{{ bill.bill_number }}</td>
-                            <td class="py-3 px-4">{{ bill.created_at|date:"h:i A" }}</td>
-                            <td class="py-3 px-4">{{ bill.order.table.table_number }}</td>
-                            <td class="py-3 px-4 font-bold text-green-600">₹{{ bill.order.total|floatformat:2 }}</td>
-                            <td class="py-3 px-4">{{ bill.payment_method|title }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Export Reports</p>
+                        <div class="flex space-x-2 mt-2">
+                            <a href="{% url 'export_report' 'daily' %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                <i class="fas fa-download mr-1"></i> Daily
+                            </a>
+                            <a href="{% url 'export_report' 'weekly' %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                <i class="fas fa-download mr-1"></i> Weekly
+                            </a>
+                            <a href="{% url 'export_report' 'monthly' %}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                <i class="fas fa-download mr-1"></i> Monthly
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-file-export text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
             </div>
         </div>
-        {% endif %}
-    </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Sales Chart -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-lg font-bold mb-4">Today's Sales by Hour</h2>
+                <div class="h-64">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Top Selling Items -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-lg font-bold mb-4">Top Selling Items (Last 7 Days)</h2>
+                <div class="overflow-y-auto max-h-64">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="p-2 text-left">Item</th>
+                                <th class="p-2 text-left">Category</th>
+                                <th class="p-2 text-left">Quantity</th>
+                                <th class="p-2 text-left">Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in top_items %}
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-2">{{ item.menu_item__name }}</td>
+                                <td class="p-2 text-gray-600">{{ item.menu_item__category__name }}</td>
+                                <td class="p-2 font-bold">{{ item.total_quantity }}</td>
+                                <td class="p-2 font-bold text-green-600">₹{{ item.total_revenue }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="p-4 text-center text-gray-500">
+                                    No sales data available
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'item_sales_report' %}?period=week" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-chart-bar mr-1"></i> View Detailed Item Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-lg font-bold mb-4">Quick Statistics</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 border rounded-lg">
+                    <p class="text-sm text-gray-500">Avg Order Value</p>
+                    <p class="text-xl font-bold">₹{{ daily_avg|floatformat:2 }}</p>
+                </div>
+                <div class="text-center p-4 border rounded-lg">
+                    <p class="text-sm text-gray-500">Orders Today</p>
+                    <p class="text-xl font-bold">{{ daily_orders }}</p>
+                </div>
+                <div class="text-center p-4 border rounded-lg">
+                    <p class="text-sm text-gray-500">Tables Occupied</p>
+                    <p class="text-xl font-bold">{{ restaurant.table_set.filter.status='occupied'|length }}</p>
+                </div>
+                <div class="text-center p-4 border rounded-lg">
+                    <p class="text-sm text-gray-500">Total Tables</p>
+                    <p class="text-xl font-bold">{{ restaurant.table_set.count }}</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Sales Chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ hourly_labels|safe }},
+                datasets: [{
+                    label: 'Sales (₹)',
+                    data: {{ hourly_data|safe }},
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Sales: ₹' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh every 5 minutes
+        setTimeout(function() {
+            window.location.reload();
+        }, 300000);
+    </script>
 </body>
 </html>

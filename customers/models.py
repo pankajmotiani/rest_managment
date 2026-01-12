@@ -1,4 +1,5 @@
 from django.db import models
+from pos.models import Order
 
 class Customer(models.Model):
     name = models.CharField(max_length=200)
@@ -16,13 +17,10 @@ class Customer(models.Model):
         return f"{self.name} ({self.phone})"
     
     def update_stats(self):
-        from pos.models import Order
-        orders = Order.objects.filter(customer_phone=self.phone, status='completed')
+        orders = Order.objects.filter(customer_phone=self.phone)
         self.total_orders = orders.count()
-        self.total_spent = sum(float(order.total) for order in orders)
-        
+        self.total_spent = sum(order.total for order in orders if order.status == 'completed')
         last_order = orders.order_by('-created_at').first()
         if last_order:
             self.last_order_date = last_order.created_at
-        
         self.save()
